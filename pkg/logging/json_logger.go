@@ -125,7 +125,15 @@ func (jsonLogger *JSONLogger) PostProcess() error {
 // Loads log entries from logfiles produced by the json-logger driver and forwards
 // them to the provided io.Writers after applying the provided logging options.
 func viewLogsJSONFile(lvopts LogViewOptions, stdout, stderr io.Writer, stopChannel chan os.Signal) error {
-	logFilePath := jsonfile.Path(lvopts.DatastoreRootPath, lvopts.Namespace, lvopts.ContainerID)
+
+	var logFilePath string
+	lvopts.LogPath = "/var/log/pods/kube-system_kube-proxy-kvgk5_8891475d-934d-44c7-833e-a20b2223ed88/kube-proxy/5.log"
+	if lvopts.LogPath != "" {
+		logFilePath = lvopts.LogPath
+	} else {
+		logFilePath = jsonfile.Path(lvopts.DatastoreRootPath, lvopts.Namespace, lvopts.ContainerID)
+	}
+
 	if _, err := os.Stat(logFilePath); err != nil {
 		return fmt.Errorf("failed to stat JSON log file ")
 	}

@@ -63,6 +63,7 @@ type LogViewOptions struct {
 
 	// Absolute path to the nerdctl datastore's root.
 	DatastoreRootPath string
+	LogPath           string
 
 	// Whether or not to follow the output of the container logs.
 	Follow bool
@@ -99,7 +100,8 @@ func (lvo *LogViewOptions) Validate() error {
 // fetching/outputting container logs based on its internal LogViewOptions.
 type ContainerLogViewer struct {
 	// Logging configuration.
-	loggingConfig LogConfig
+	//loggingConfig LogConfig
+	logDriver string
 
 	// Log viewing options and filters.
 	logViewingOptions LogViewOptions
@@ -110,7 +112,33 @@ type ContainerLogViewer struct {
 
 // Validates the given LogViewOptions, loads the logging config for the
 // given container and returns a ContainerLogViewer.
-func InitContainerLogViewer(lvopts LogViewOptions, stopChannel chan os.Signal) (*ContainerLogViewer, error) {
+func InitContainerLogViewer(lvopts LogViewOptions, stopChannel chan os.Signal, viaCRI bool) (*ContainerLogViewer, error) {
+	var driver string
+
+	if viaCRI {
+		driver = "json-file"
+	} else {
+		if err := lvopts.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid LogViewOptions provided (%#v): %s", lvopts, err)
+		}
+
+		lcfg, err := LoadLogConfig(lvopts.DatastoreRootPath, lvopts.Namespace, lvopts.ContainerID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load logging config: %s", err)
+		}
+		driver = lcfg.Driver
+	}
+
+	lv := &ContainerLogViewer{
+		logDriver:         driver,
+		logViewingOptions: lvopts,
+		stopChannel:       stopChannel,
+	}
+
+	return lv, nil
+}
+
+func InitContainerLogViewerForCRI(lvopts LogViewOptions, stopChannel chan os.Signal) (*ContainerLogViewer, error) {
 	if err := lvopts.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid LogViewOptions provided (%#v): %s", lvopts, err)
 	}
@@ -120,7 +148,7 @@ func InitContainerLogViewer(lvopts LogViewOptions, stopChannel chan os.Signal) (
 		return nil, fmt.Errorf("failed to load logging config: %s", err)
 	}
 	lv := &ContainerLogViewer{
-		loggingConfig:     lcfg,
+		logDriver:         lcfg.Driver,
 		logViewingOptions: lvopts,
 		stopChannel:       stopChannel,
 	}
@@ -130,7 +158,7 @@ func InitContainerLogViewer(lvopts LogViewOptions, stopChannel chan os.Signal) (
 
 // Prints all logs for this LogViewer's containers to the provided io.Writers.
 func (lv *ContainerLogViewer) PrintLogsTo(stdout, stderr io.Writer) error {
-	viewerFunc, err := getLogViewer(lv.loggingConfig.Driver)
+	viewerFunc, err := getLogViewer(lv.logDriver)
 	if err != nil {
 		return err
 	}

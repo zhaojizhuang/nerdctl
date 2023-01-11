@@ -143,3 +143,7 @@ func TestLogsWithFailingContainer(t *testing.T) {
 	base.Cmd("logs", "-f", containerName).AssertNoOut("baz")
 	base.Cmd("rm", "-f", containerName).AssertOK()
 }
+
+func TestPrintLog() {
+
+}

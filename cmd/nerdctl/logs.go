@@ -23,8 +23,10 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/pkg/cri/annotations"
 	"github.com/containerd/nerdctl/pkg/clientutil"
 	"github.com/containerd/nerdctl/pkg/idutil/containerwalker"
 	"github.com/containerd/nerdctl/pkg/labels"
@@ -32,6 +34,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+const Timeout = time.Second * 2
 
 func newLogsCommand() *cobra.Command {
 	var logsCommand = &cobra.Command{
@@ -62,8 +66,8 @@ func logsAction(cmd *cobra.Command, args []string) error {
 	}
 
 	switch globalOptions.Namespace {
-	case "moby", "k8s.io":
-		logrus.Warn("Currently, `nerdctl logs` only supports containers created with `nerdctl run -d`")
+	case "moby":
+		logrus.Warn("Currently, `nerdctl logs` only supports containers created with `nerdctl run -d` and CRI")
 	}
 	client, ctx, cancel, err := clientutil.NewClient(cmd.Context(), globalOptions.Namespace, globalOptions.Address)
 	if err != nil {
@@ -138,18 +142,26 @@ func logsAction(cmd *cobra.Command, args []string) error {
 					stopChannel <- os.Interrupt
 				}()
 			}
-
+			ContainerLogPath := "io.kubernetes.cri.container-log-path"
 			logViewOpts := logging.LogViewOptions{
 				ContainerID:       found.Container.ID(),
 				Namespace:         l[labels.Namespace],
 				DatastoreRootPath: dataStore,
+				LogPath:           l[ContainerLogPath],
 				Follow:            follow,
 				Timestamps:        timestamps,
 				Tail:              tail,
 				Since:             since,
 				Until:             until,
 			}
-			logViewer, err := logging.InitContainerLogViewer(logViewOpts, stopChannel)
+
+			var isCRI = true
+			// Created By CRI
+			if _, ok := l[annotations.ContainerType]; ok {
+				isCRI = true
+			}
+
+			logViewer, err := logging.InitContainerLogViewer(logViewOpts, stopChannel, isCRI)
 			if err != nil {
 				return err
 			}

@@ -29,6 +29,7 @@ type Config struct {
 	Debug            bool     `toml:"debug"`
 	DebugFull        bool     `toml:"debug_full"`
 	Address          string   `toml:"address"`
+	Timeout          string   `toml:"timeout"`
 	Namespace        string   `toml:"namespace"`
 	Snapshotter      string   `toml:"snapshotter"`
 	CNIPath          string   `toml:"cni_path"`

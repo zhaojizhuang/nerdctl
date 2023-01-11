@@ -29,6 +29,7 @@ require (
 	github.com/fahedouch/go-logrotate v0.1.3
 	github.com/fatih/color v1.13.0
 	github.com/fluent/fluent-logger-golang v1.9.0
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ipfs/go-cid v0.3.2
 	github.com/mattn/go-isatty v0.0.17
@@ -57,6 +58,7 @@ require (
 	golang.org/x/text v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.4.0
+	k8s.io/kubernetes v1.13.0
 )
 
 require (
